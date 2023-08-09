@@ -1,4 +1,8 @@
 function parseAndDisplayContent() {
+
+    // console.log for debugging
+    console.log("Parsing and displaying content...");
+
     const article = new Readability(document).parse();
     const contentDiv = document.createElement('div');
     contentDiv.innerHTML = article.content;
@@ -16,7 +20,15 @@ function parseAndDisplayContent() {
 }
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+
+    // console.log for debugging
+    console.log("Content script received a message:", request);
+  
     if(request.action === "startParsing") {
+
+        // console.log for debugging
+        console.log("Received 'startParsing' action.");
+        
         parseAndDisplayContent();
         sendResponse({ status: "success" });
     }
