@@ -1,32 +1,29 @@
 {
-    "manifest_version": 3,
-    "name": "Viceroy",
-    "version": "1.0",
-    "description": "A Reader View extension",
-    "icons": {
-        "16": "icons/sitting.png",
-        "48": "icons/laying.png",
-        "128": "icons/dog.png"
-    },
-    "permissions": [
-        "activeTab",
-        "storage"
-    ],
-    "background": {
-        "service_worker": "background.js"
-    },
-    "action": {
-        "default_popup": "popup.html",
-        "default_icon": {
-            "16": "icons/sitting.png",
-            "48": "icons/laying.png",
-            "128": "icons/dog.png"
-        }
-    },
-    "content_scripts": [
-        {
-            "matches": ["<all_urls>"],
-            "js": ["content.js"]
-        }
-    ]
+  "manifest_version": 3,
+  "name": "Viceroy",
+  "version": "1.0",
+  "description": "A Reader View extension",
+  "icons": {
+    "16": "icons/sitting.png",
+    "48": "icons/laying.png",
+    "128": "icons/dog.png"
+  },
+  "permissions": ["activeTab", "storage"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/sitting.png",
+      "48": "icons/laying.png",
+      "128": "icons/dog.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ]
 }

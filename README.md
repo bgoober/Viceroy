@@ -1,6 +1,6 @@
 # Viceroy
-An artificially intelligent reader view for detecting and categorizing bias in an article or web page.
 
+An artificially intelligent reader view for detecting and categorizing bias in an article or web page.
 
 ---
 
@@ -65,6 +65,7 @@ Creating a browser extension like Viceroy would involve a multi-step process, en
 Given the complexity of this project, it would be wise to start with a prototype, focusing on core features. Once the prototype is validated, you can iteratively improve and add more advanced functionalities.
 
 ---
+
 Building a full-fledged application like Viceroy is a comprehensive project that would typically involve several developers and iterations. However, I can provide a basic outline and some code snippets to get you started.
 
 ### 1. Browser Extension Manifest (manifest.json):
@@ -101,22 +102,22 @@ This is essential for any browser extension. This example is for a Chrome extens
 ### 2. Popup UI (popup.html):
 
 ```html
-<!DOCTYPE html>
+<!doctype html>
 <html>
-<head>
-  <title>Viceroy</title>
-  <style>
-    body {
-      background-color: #F5ECE3; /* soft beige color */
-      font-family: Arial, sans-serif;
-      width: 250px;
-    }
-  </style>
-</head>
-<body>
-  <h2>Viceroy Reader</h2>
-  <button id="activate">Activate Reader View</button>
-</body>
+  <head>
+    <title>Viceroy</title>
+    <style>
+      body {
+        background-color: #f5ece3; /* soft beige color */
+        font-family: Arial, sans-serif;
+        width: 250px;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Viceroy Reader</h2>
+    <button id="activate">Activate Reader View</button>
+  </body>
 </html>
 ```
 
@@ -128,17 +129,17 @@ This script will be responsible for scraping the page content and initiating the
 function removeClutter() {
   // Logic to remove ads, pop-ups, and other non-essential elements
   // You'd likely need more advanced logic and perhaps some libraries to assist.
-  const ads = document.querySelectorAll('.ad, .popup');
-  ads.forEach(ad => ad.remove());
+  const ads = document.querySelectorAll(".ad, .popup");
+  ads.forEach((ad) => ad.remove());
 
   // More code here for additional processing...
 }
 
 // Listen for a message from the popup to activate the reader view
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === 'activateReaderView') {
+  if (message.action === "activateReaderView") {
     removeClutter();
-    sendResponse({status: 'success'});
+    sendResponse({ status: "success" });
   }
 });
 ```
@@ -151,8 +152,8 @@ This script can listen to browser events and communicate with the content script
 chrome.action.onClicked.addListener((tab) => {
   // Send a message to the content script to activate the reader view
   chrome.scripting.executeScript({
-    target: {tabId: tab.id},
-    function: removeClutter
+    target: { tabId: tab.id },
+    function: removeClutter,
   });
 });
 ```
