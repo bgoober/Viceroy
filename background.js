@@ -1,5 +1,10 @@
 // background.js
 
+//self.importScripts("content.js");
+//self.importScripts("popup.js");
+//self.importScripts("manifest.json");
+//self.importScripts("popup.html");
+
 // Function to fetch and parse content for a given URL
 // This is a placeholder and might need to be implemented based on your needs
 async function fetchAndParseContent(url) {

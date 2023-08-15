@@ -3,12 +3,19 @@
   "name": "Viceroy",
   "version": "1.0",
   "description": "A Reader View extension",
+  "default_locale": "en",
   "icons": {
     "16": "icons/sitting.png",
     "48": "icons/laying.png",
     "128": "icons/dog.png"
   },
-  "permissions": ["activeTab", "storage"],
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "contextMenus",
+    "notifications"
+  ],
   "background": {
     "service_worker": "background.js"
   },
