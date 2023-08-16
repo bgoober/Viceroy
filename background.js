@@ -27,7 +27,7 @@ chrome.action.onClicked.addListener((tab) => {
                     // Step 4: Apply the reader.css styling
                     chrome.scripting.insertCSS({
                         target: { tabId: tab.id },
-                        files: ['styles/reader.css']
+                        files: ['reader.css']
                     });
                 });
             }
