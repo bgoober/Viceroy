@@ -10,7 +10,8 @@
   },
   "permissions": [
     "activeTab",
-    "scripting"
+    "scripting",
+    "tabs"
   ],
   "background": {
     "service_worker": "background.js"
@@ -20,6 +21,13 @@
       "16": "icons/sitting.png",
       "48": "icons/laying.png",
       "128": "icons/dog.png"
+    }
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+B"
+      }
     }
   }
 }
