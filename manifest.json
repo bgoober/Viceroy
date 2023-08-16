@@ -9,28 +9,17 @@
     "128": "icons/dog.png"
   },
   "permissions": [
-    "storage",
     "activeTab",
-    "scripting",
-    "contextMenus",
-    "notifications",
-    "declarativeNetRequestWithHostAccess"
+    "scripting"
   ],
   "background": {
-    "service_worker": "worker.js"
+    "service_worker": "background.js"
   },
   "action": {
-    "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/sitting.png",
       "48": "icons/laying.png",
       "128": "icons/dog.png"
     }
-  },
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"]
-    }
-  ]
+  }
 }
