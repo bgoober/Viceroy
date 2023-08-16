@@ -7,21 +7,22 @@ chrome.action.onClicked.addListener((tab) => {
         // Step 2: Parse content with Readability
         chrome.scripting.executeScript({
             target: { tabId: tab.id },
-            code: `
+            func: function() {
                 const documentClone = document.cloneNode(true);
                 const article = new Readability(documentClone).parse();
-                article ? article.content : '';
-            `
+                return article ? article.content : '';
+            }
         }, ([result]) => {
             if (result && result.content) {
                 // Step 3: Replace the current page content with parsed content
                 chrome.scripting.executeScript({
                     target: { tabId: tab.id },
-                    code: `
+                    func: function(content) {
                         document.open();
-                        document.write(\`${result.content}\`);
+                        document.write(content);
                         document.close();
-                    `
+                    },
+                    args: [result.content]
                 }, () => {
                     // Step 4: Apply the reader.css styling
                     chrome.scripting.insertCSS({
@@ -33,6 +34,7 @@ chrome.action.onClicked.addListener((tab) => {
         });
     });
 });
+
 
 
 
