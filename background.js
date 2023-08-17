@@ -1,110 +1,170 @@
-// background.js
+let readerTabs = {};
 
-//self.importScripts("content.js");
-//self.importScripts("popup.js");
-//self.importScripts("manifest.json");
-//self.importScripts("popup.html");
-
-// Function to fetch and parse content for a given URL
-// This is a placeholder and might need to be implemented based on your needs
-async function fetchAndParseContent(url) {
-  // Fetch the content from the provided URL
-  const response = await fetch(url);
-  const htmlContent = await response.text();
-
-  // Parse the content with Readability
-  const dom = new DOMParser().parseFromString(htmlContent, "text/html");
-  const article = new Readability(dom).parse();
-
-  return article.content; // Assuming we only want the content for caching and display
-}
-
-// Check if content is cached for a given URL
-function getCachedContent(url) {
-  return new Promise((resolve, reject) => {
-    chrome.storage.local.get(url, (result) => {
-      if (chrome.runtime.lastError) {
-        return reject(chrome.runtime.lastError);
-      }
-      resolve(result[url]);
-    });
-  });
-}
-
-// Cache content for a given URL
-function cacheContent(url, content) {
-  const data = {};
-  data[url] = content;
-  return new Promise((resolve, reject) => {
-    chrome.storage.local.set(data, () => {
-      if (chrome.runtime.lastError) {
-        return reject(chrome.runtime.lastError);
-      }
-      resolve();
-    });
-  });
-}
-
-// Listening for messages from either the popup script or content script
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === "parsePage") {
-    // console.log debugging line
-    console.log(
-      "Received 'parsePage' action. Sending 'startParsing' to content script.",
-    );
-
-    // Get the current tab and send a message to the content script
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      const activeTab = tabs[0];
-      chrome.tabs.sendMessage(
-        activeTab.id,
-        { action: "startParsing" },
-        (response) => {
-          if (response && response.status === "success") {
-            console.log("Page parsed successfully!");
-            sendResponse({ status: "success" });
-          } else {
-            console.error("Failed to parse the page.");
-            sendResponse({ status: "failed" });
-          }
-        },
-      );
-    });
-  } else if (message.action === "fetchContent") {
-    // console.log for debugging
-    console.log("Received 'fetchContent' action.");
-
-    getCachedContent(message.url)
-      .then((cachedContent) => {
-        if (cachedContent) {
-          sendResponse({ content: cachedContent });
-        } else {
-          fetchAndParseContent(message.url)
-            .then((content) => {
-              cacheContent(message.url, content)
-                .then(() => {
-                  sendResponse({ content: content });
-                })
-                .catch((error) => {
-                  console.error("Error caching content:", error);
-                  sendResponse({ error: "Failed to cache content." });
-                });
-            })
-            .catch((error) => {
-              console.error("Error fetching and parsing content:", error);
-              sendResponse({ error: "Failed to fetch and parse content." });
-            });
-        }
-      })
-      .catch((error) => {
-        console.error("Error retrieving cached content:", error);
-        sendResponse({ error: "Failed to retrieve cached content." });
-      });
-    return true; // Indicate that the response is asynchronous
-  }
+chrome.action.onClicked.addListener((tab) => {
+    toggleReaderView(tab);
 });
 
-// Any other background tasks or event listeners can be added here. For example:
-// - Listening for extension installation or update events
-// - Managing storage for user settings or cached data
-// - Handling browser actions, like button clicks or badge updates
+function toggleReaderView(tab) {
+    if (readerTabs[tab.id]) {
+        // Tab is in reader mode, so reload to get original content
+        chrome.tabs.reload(tab.id);
+        delete readerTabs[tab.id];  // Remove the tab from the readerTabs object
+    } else {
+        // Switch to reader mode
+        convertToReaderView(tab);
+    }
+}
+
+function convertToReaderView(tab) {
+    // Step 1: Inject Readability library
+    chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['libs/readability.js']
+    }, (injectionResults) => {
+        if (chrome.runtime.lastError) {
+            console.error('Error injecting Readability:', chrome.runtime.lastError);
+            return;
+        }
+
+        console.log('Readability library injected:', injectionResults);
+
+        // Step 2: Parse content with Readability
+        chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            func: function () {
+                const documentClone = document.cloneNode(true);
+                const article = new Readability(documentClone).parse();
+                return article ? article.content : '';
+            }
+        }, ([result]) => {
+            console.log('Content parsed with Readability:', result);
+
+            const articleContent = result.result || (result[0] && result[0].result);
+            if (articleContent) {
+                // Step 3: Replace the current page content with parsed content
+                chrome.scripting.executeScript({
+                    target: { tabId: tab.id },
+                    func: function (content) {
+                        document.open();
+                        document.write(content);
+                        document.close();
+                    },
+                    args: [articleContent]
+                }, (insertionResults) => {
+                    if (chrome.runtime.lastError) {
+                        console.error('Error replacing content:', chrome.runtime.lastError);
+                        return;
+                    }
+
+                    // Mark tab as being in reader view
+                    readerTabs[tab.id] = true;
+
+                    // Step 4: Apply the reader.css styling
+                    chrome.scripting.insertCSS({
+                        target: { tabId: tab.id },
+                        files: ['reader.css']
+                    }, (styleResults) => {
+                        if (chrome.runtime.lastError) {
+                            console.error('Error applying CSS:', chrome.runtime.lastError);
+                        }
+
+                        console.log('CSS applied:', styleResults);
+                    });
+                });
+            } else {
+                console.warn('No parsed content received.');
+            }
+        });
+    });
+}
+
+// When a tab is updated or closed, ensure it's removed from the readerTabs dictionary
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (changeInfo.status === 'complete' && readerTabs[tabId]) {
+        delete readerTabs[tabId];
+    }
+});
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+    if (readerTabs[tabId]) {
+        delete readerTabs[tabId];
+    }
+});
+
+chrome.commands.onCommand.addListener(function(command) {
+    console.log("Command received:", command);
+    if (command === "_execute_browser_action" || command === "_execute_action") {  
+        chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+            const currentTab = tabs[0];
+            if (currentTab) {
+                toggleReaderView(currentTab);
+            }
+        });
+    }
+});
+
+
+
+// chrome.action.onClicked.addListener((tab) => {
+//     // Step 1: Inject Readability library
+//     chrome.scripting.executeScript({
+//         target: { tabId: tab.id },
+//         files: ['libs/readability.js']
+//     }, (injectionResults) => {
+//         if (chrome.runtime.lastError) {
+//             console.error('Error injecting Readability:', chrome.runtime.lastError);
+//             return;
+//         }
+
+//         console.log('Readability library injected:', injectionResults);
+
+//         // Step 2: Parse content with Readability
+//         chrome.scripting.executeScript({
+//             target: { tabId: tab.id },
+//             func: function () {
+//                 const documentClone = document.cloneNode(true);
+//                 const article = new Readability(documentClone).parse();
+//                 return article ? article.content : '';
+//             }
+//         }, ([result]) => {
+//             console.log('Content parsed with Readability:', result);
+
+//             // Detailed structure log
+//             console.log('Detailed structure of the result:', JSON.stringify(result, null, 2));
+
+//             // Check if there's content and handle accordingly
+//             const articleContent = result.result || (result[0] && result[0].result);
+//             if (articleContent) {
+//                 // Step 3: Replace the current page content with parsed content
+//                 chrome.scripting.executeScript({
+//                     target: { tabId: tab.id },
+//                     func: function (content) {
+//                         document.open();
+//                         document.write(content);
+//                         document.close();
+//                     },
+//                     args: [articleContent]
+//                 }, (insertionResults) => {
+//                     if (chrome.runtime.lastError) {
+//                         console.error('Error replacing content:', chrome.runtime.lastError);
+//                         return;
+//                     }
+
+//                     // Step 4: Apply the reader.css styling
+//                     chrome.scripting.insertCSS({
+//                         target: { tabId: tab.id },
+//                         files: ['reader.css']
+//                     }, (styleResults) => {
+//                         if (chrome.runtime.lastError) {
+//                             console.error('Error applying CSS:', chrome.runtime.lastError);
+//                         }
+
+//                         console.log('CSS applied:', styleResults);
+//                     });
+//                 });
+//             } else {
+//                 console.warn('No parsed content received.');
+//             }
+//         });
+//     });
+// });
