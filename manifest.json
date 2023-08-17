@@ -28,7 +28,8 @@
     "_execute_action": {
       "suggested_key": {
         "default": "Ctrl+B"
-      }
+      },
+      "description": "Toggle reader view"
     }
   }
 }
