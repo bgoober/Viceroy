@@ -31,5 +31,8 @@
       },
       "description": "Toggle reader view"
     }
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; img-src 'self';"
   }
 }

@@ -9,6 +9,16 @@ body {
     margin: 4px; /* Space around the body to show off the shadow */
 }
 
+#logo {
+    position: absolute;
+    top: 10px;  /* Adjust these values to position your logo */
+    left: 10px;
+    margin: 10px;  /* Adjust as needed for desired spacing */
+    width: 50px;   /* Adjust to the desired size */
+    height: auto;  /* This maintains the logo's aspect ratio */
+    z-index: 1;    /* Ensure the logo sits above other content */
+}
+
 /*
 Possible Color Options:
 
