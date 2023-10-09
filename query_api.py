@@ -3,9 +3,9 @@ import requests
 
 API_TOKEN = "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"
 
-headers = {"Authorization": f"Bearer {API_TOKEN}"}
+API_URL = "https://api-inference.huggingface.co/models/bucketresearch/politicalBiasBERT"
 
-API_URL = "https://api-inference.huggingface.co/models/mediabiasgroup/roberta_mtl_media_bias"
+headers = {"Authorization": f"Bearer {API_TOKEN}"}
 
 def query(payload):
     data = json.dumps(payload)
