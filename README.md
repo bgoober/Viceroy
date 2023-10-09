@@ -4,6 +4,18 @@ An artificially intelligent reader view for detecting and categorizing bias in a
 
 ---
 
+We will likely need a model, or models, capable of at least these three Tasks:
+
+Summarization:
+https://huggingface.co/tasks/summarization
+
+Text Generation:
+https://huggingface.co/tasks/text-generation
+
+Text Classification
+https://huggingface.co/tasks/text-classification
+
+
 From GPT-4
 
 Creating a browser extension like Viceroy would involve a multi-step process, encompassing UI/UX design, front-end and back-end development, as well as the integration of large language models for content analysis. Below is a high-level approach to building Viceroy:
