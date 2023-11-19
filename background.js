@@ -19,14 +19,12 @@ function convertToReaderView(tab) {
     // Step 1: Inject Readability library
     chrome.scripting.executeScript({
         target: { tabId: tab.id },
-        files: ['libs/readability.js']
+        files: ['readability.js']
     }, (injectionResults) => {
         if (chrome.runtime.lastError) {
             console.error('Error injecting Readability:', chrome.runtime.lastError);
             return;
         }
-
-        console.log('Readability library injected:', injectionResults);
 
         // Step 2: Parse content with Readability
         chrome.scripting.executeScript({
@@ -37,46 +35,101 @@ function convertToReaderView(tab) {
                 return article ? article.content : '';
             }
         }, ([result]) => {
-            console.log('Content parsed with Readability:', result);
-
             const articleContent = result.result || (result[0] && result[0].result);
             if (articleContent) {
-                // Step 3: Replace the current page content with parsed content
-                chrome.scripting.executeScript({
-                    target: { tabId: tab.id },
-                    func: function (content) {
-                        document.open();
-                        document.write(content);
-                        document.close();
-                    },
-                    args: [articleContent]
-                }, (insertionResults) => {
-                    if (chrome.runtime.lastError) {
-                        console.error('Error replacing content:', chrome.runtime.lastError);
-                        return;
-                    }
-
-                    // Mark tab as being in reader view
-                    readerTabs[tab.id] = true;
-
-                    // Step 4: Apply the reader.css styling
-                    chrome.scripting.insertCSS({
+                // Step 3: Send the content to the backend service
+                fetch('https://your-backend-service.com/process', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: articleContent })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Step 4: Replace the current page content with the results
+                    chrome.scripting.executeScript({
                         target: { tabId: tab.id },
-                        files: ['reader.css']
-                    }, (styleResults) => {
+                        func: function (data) {
+                            document.open();
+                            document.write(data.summary);
+                            document.write(data.simplifiedContent);
+                            document.write(data.biasClassification);
+                            document.close();
+                        },
+                        args: [data]
+                    }, (insertionResults) => {
                         if (chrome.runtime.lastError) {
-                            console.error('Error applying CSS:', chrome.runtime.lastError);
+                            console.error('Error replacing content:', chrome.runtime.lastError);
                         }
-
-                        console.log('CSS applied:', styleResults);
                     });
-                });
-            } else {
-                console.warn('No parsed content received.');
+                })
+                .catch(error => console.error('Error processing content:', error));
             }
         });
     });
 }
+
+// function convertToReaderView(tab) {
+//     // Step 1: Inject Readability library
+//     chrome.scripting.executeScript({
+//         target: { tabId: tab.id },
+//         files: ['libs/readability.js']
+//     }, (injectionResults) => {
+//         if (chrome.runtime.lastError) {
+//             console.error('Error injecting Readability:', chrome.runtime.lastError);
+//             return;
+//         }
+
+//         console.log('Readability library injected:', injectionResults);
+
+//         // Step 2: Parse content with Readability
+//         chrome.scripting.executeScript({
+//             target: { tabId: tab.id },
+//             func: function () {
+//                 const documentClone = document.cloneNode(true);
+//                 const article = new Readability(documentClone).parse();
+//                 return article ? article.content : '';
+//             }
+//         }, ([result]) => {
+//             console.log('Content parsed with Readability:', result);
+
+//             const articleContent = result.result || (result[0] && result[0].result);
+//             if (articleContent) {
+//                 // Step 3: Replace the current page content with parsed content
+//                 chrome.scripting.executeScript({
+//                     target: { tabId: tab.id },
+//                     func: function (content) {
+//                         document.open();
+//                         document.write(content);
+//                         document.close();
+//                     },
+//                     args: [articleContent]
+//                 }, (insertionResults) => {
+//                     if (chrome.runtime.lastError) {
+//                         console.error('Error replacing content:', chrome.runtime.lastError);
+//                         return;
+//                     }
+
+//                     // Mark tab as being in reader view
+//                     readerTabs[tab.id] = true;
+
+//                     // Step 4: Apply the reader.css styling
+//                     chrome.scripting.insertCSS({
+//                         target: { tabId: tab.id },
+//                         files: ['reader.css']
+//                     }, (styleResults) => {
+//                         if (chrome.runtime.lastError) {
+//                             console.error('Error applying CSS:', chrome.runtime.lastError);
+//                         }
+
+//                         console.log('CSS applied:', styleResults);
+//                     });
+//                 });
+//             } else {
+//                 console.warn('No parsed content received.');
+//             }
+//         });
+//     });
+// }
 
 // When a tab is updated or closed, ensure it's removed from the readerTabs dictionary
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
