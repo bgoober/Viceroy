@@ -3,11 +3,6 @@
   "name": "Viceroy",
   "version": "1.0",
   "description": "A Reader View extension",
-  "icons": {
-    "16": "icons/sitting.png",
-    "48": "icons/laying.png",
-    "128": "icons/dog.png"
-  },
   "permissions": [
     "activeTab",
     "scripting",
@@ -16,13 +11,6 @@
   ],
   "background": {
     "service_worker": "background.js"
-  },
-  "action": {
-    "default_icon": {
-      "16": "icons/sitting.png",
-      "48": "icons/laying.png",
-      "128": "icons/dog.png"
-    }
   },
   "commands": {
     "_execute_action": {
