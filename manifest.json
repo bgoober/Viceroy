@@ -3,6 +3,11 @@
   "name": "Viceroy",
   "version": "1.0",
   "description": "A Reader View extension",
+  "icons": {
+    "16": "icons/V.png",
+    "48": "icons/V.png",
+    "128": "icons/V.png"
+  },
   "permissions": [
     "activeTab",
     "scripting",
