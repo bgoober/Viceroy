@@ -91,10 +91,10 @@ chrome.tabs.onRemoved.addListener((tabId) => {
     }
 });
 
-chrome.commands.onCommand.addListener(function (command) {
+chrome.commands.onCommand.addListener(function(command) {
     console.log("Command received:", command);
-    if (command === "_execute_browser_action" || command === "_execute_action") {
-        chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+    if (command === "_execute_browser_action" || command === "_execute_action") {  
+        chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
             const currentTab = tabs[0];
             if (currentTab) {
                 toggleReaderView(currentTab);
