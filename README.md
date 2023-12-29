@@ -2,6 +2,8 @@
 
 An artificially intelligent reader view for detecting and categorizing bias in an article or web page.
 
+AI Agents are from Fetch.ai's uAgents repository -- https://github.com/fetchai/uAgents
+
 ---
 
 We will likely need a model, or models, capable of at least these three Tasks:
