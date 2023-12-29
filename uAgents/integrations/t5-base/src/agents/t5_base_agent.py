@@ -1,5 +1,5 @@
 from uagents import Agent, Context, Protocol
-from messages.t5_base import TranslationRequest, TranslationResponse, Error
+from messages.t5_base import TranslationRequest, TranslationResponse, SummarizationResponse, SummarizationRequest, Error
 from uagents.setup import fund_agent_if_low
 import os
 import requests
@@ -32,17 +32,53 @@ agent = Agent(
 fund_agent_if_low(agent.wallet.address())
 
 
-async def translate_text(ctx: Context, sender: str, input_text: str):
+### TRANSLATIONS ###
+
+#async def translate_text(ctx: Context, sender: str, input_text: str):
+    # Prepare the data
+ #   payload = {
+  #      "inputs": input_text
+   # }
+
+    # Make the POST request and handle possible errors
+    #try:
+     #   response = requests.post(T5_BASE_URL, headers=HEADERS, json=payload)
+      #  if response.status_code == 200:
+       #     await ctx.send(sender, TranslationResponse(translated_text=f"{response.json()}"))
+        #    return
+        #else:
+        #    await ctx.send(sender, Error(error=f"Error: {response.json()}"))
+        #    return
+    #except Exception as ex:
+     #   await ctx.send(sender, Error(error=f"Exception Occurred: {ex}"))
+      #  return
+
+# Create an instance of Protocol with a label "T5BaseModelAgent"
+t5_base_agent = Protocol(name="T5BaseModelAgent", version="0.0.1")
+
+# translation
+#@t5_base_agent.on_message(model=TranslationRequest, replies={TranslationResponse, Error})
+#async def handle_request(ctx: Context, sender: str, request: TranslationRequest):
+    # Log the request details
+#    ctx.logger.info(f"Got request from  {sender}")
+
+ #   await translate_text(ctx, sender, request.text)
+
+
+### SUMMARIZATIONS ###
+
+# summarize_text async function
+async def summarize_text(ctx: Context, sender: str, input_text: str):
     # Prepare the data
     payload = {
-        "inputs": input_text
+        "inputs": f"summarize: {input_text}"
     }
 
     # Make the POST request and handle possible errors
     try:
         response = requests.post(T5_BASE_URL, headers=HEADERS, json=payload)
         if response.status_code == 200:
-            await ctx.send(sender, TranslationResponse(translated_text=f"{response.json()}"))
+            await ctx.send(sender, SummarizationResponse(summarized_text=f"{response.json()}"))
             return
         else:
             await ctx.send(sender, Error(error=f"Error: {response.json()}"))
@@ -51,16 +87,15 @@ async def translate_text(ctx: Context, sender: str, input_text: str):
         await ctx.send(sender, Error(error=f"Exception Occurred: {ex}"))
         return
 
-# Create an instance of Protocol with a label "T5BaseModelAgent"
-t5_base_agent = Protocol(name="T5BaseModelAgent", version="0.0.1")
 
-
-@t5_base_agent.on_message(model=TranslationRequest, replies={TranslationResponse, Error})
-async def handle_request(ctx: Context, sender: str, request: TranslationRequest):
+# create SummarizationRequest for t5_base_agent
+@t5_base_agent.on_message(model=SummarizationRequest, replies={SummarizationResponse, Error})
+async def handle_request(ctx: Context, sender: str, request: SummarizationRequest):
     # Log the request details
-    ctx.logger.info(f"Got request from  {sender}")
+    ctx.logger.info(f"Got request from  {sender}, {request.text}")
 
-    await translate_text(ctx, sender, request.text)
+    await summarize_text(ctx, sender, request.text)
+
 
 
 # publish_manifest will make the protocol details available on agentverse.
