@@ -1,6 +1,6 @@
 from uagents import Bureau
 
-from agents.t5_base_agent import agent
+from agents.t5_base_HF_agent import agent
 
 
 if __name__ == "__main__":
