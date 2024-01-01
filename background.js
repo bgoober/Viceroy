@@ -10,6 +10,8 @@ chrome.action.onClicked.addListener((tab) => {
   toggleReaderView(tab);
 });
 
+let summarizedData = null;
+
 function sendPayloadToServer(payload) {
   fetch("http://localhost:3001/extension", {
     method: "POST",
@@ -18,11 +20,40 @@ function sendPayloadToServer(payload) {
     },
     body: JSON.stringify(payload),
   })
-    .then((response) => response.text())
-    .then((data) => console.log(data))
+    .then((response) => response.json())
+    .then((data) => {
+      console.log(data);
+      summarizedData = data; // Store the response data
+      createButton(); // Create the button
+    })
     .catch((error) => {
       console.error("Error:", error);
     });
+}
+
+function createButton() {
+  // Create a new button element
+  const button = document.createElement("button");
+  button.textContent = "Show Summary";
+
+  // Add an event listener to the button
+  button.addEventListener("click", () => {
+    showSummary();
+  });
+
+  // Add the button to the page
+  document.body.appendChild(button);
+}
+
+function showSummary() {
+  if (summarizedData) {
+    // Create a new paragraph element
+    const p = document.createElement("p");
+    p.textContent = summarizedData; // Set the text content to the summarized data
+
+    // Add the paragraph to the page
+    document.body.appendChild(p);
+  }
 }
 
 /// READER VIEW FUNCTIONS ///

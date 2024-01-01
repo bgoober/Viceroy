@@ -29,3 +29,20 @@ The HuggingFace Agent would also be a remotely hosted agent that itself would be
 The User Agent/Browser Extension, would be funded by the user's wallet, and pay for each Summary and Bias analysis that is requested.
 
 The remote LLM Agent would store each past request in its own expansive memory, and further requests of the same content would not require payment, or, payment would reimburse the original requester with further requests being made by subsequent users. Over time, a source of truth may be formed out of the corpus of articles parsed from all of the outlets reporting on the same news or topic. Clustering analysis can help analyze articles of the same topic or subject.
+
+
+---
+
+Here's how the process works:
+
+1. When the extension icon is clicked, the chrome.action.onClicked.addListener event is triggered. This event calls the toggleReaderView function with the current tab as an argument.
+
+2. The toggleReaderView function checks if the current tab is in reader mode. If it's not, it calls the convertToReaderView function.
+
+3. The convertToReaderView function injects the Readability library into the current tab, parses the content of the webpage using Readability, replaces the current page content with the parsed content, applies the reader.css styling, and sends the parsed content as a payload to the user agent.
+
+4. The payload is sent to the user agent by calling the sendPayloadToServer function with the payload as an argument. This function sends a POST request to the user agent's server with the payload.
+
+5. The user agent's server receives the POST request and the payload is stored in the agent's shared state.
+
+So, when the extension icon is clicked, the parsed content of the website is sent as a payload to the user agent.
