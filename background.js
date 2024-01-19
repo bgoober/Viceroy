@@ -18,18 +18,28 @@ function sendPayloadToServer(payload) {
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ content }), // Send only the content as the payload
   })
     .then((response) => response.json())
     .then((data) => {
       console.log(data);
       summarizedData = data; // Store the response data
-      createButton(); // Create the button
     })
     .catch((error) => {
       console.error("Error:", error);
     });
 }
+
+setInterval(function () {
+  fetch("http://localhost:3001/get_summary")
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.summarized_text) {
+        summarizedData = data.summarized_text; // Store the summarized text
+        createButton(); // Create the button
+      }
+    });
+}, 1000);
 
 function createButton() {
   // Create a new button element
@@ -53,6 +63,8 @@ function showSummary() {
 
     // Add the paragraph to the page
     document.body.appendChild(p);
+
+    summarizedData = null; // Reset the summarizedData variable
   }
 }
 
@@ -144,12 +156,7 @@ function convertToReaderView(tab) {
                     console.log("CSS applied:", styleResults);
 
                     // Send the parsed article content as the payload
-                    const payload = {
-                      tabId: tab.id,
-                      url: tab.url,
-                      content: articleContent,
-                    };
-                    sendPayloadToServer(payload);
+                    sendPayloadToServer(articleContent); // Send only the article content
                   }
                 );
               }
