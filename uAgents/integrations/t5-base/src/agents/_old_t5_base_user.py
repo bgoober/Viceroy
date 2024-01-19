@@ -1,7 +1,6 @@
 from uagents import Agent, Context, Protocol
 from messages.t5_base import TranslationRequest, TranslationResponse, Error, SummarizationRequest, SummarizationResponse
 from uagents.setup import fund_agent_if_low
-import base64
 import os
 
 # text you want to translate

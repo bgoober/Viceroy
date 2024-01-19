@@ -7,7 +7,6 @@ from flask import Flask, ctx, g, request, jsonify
 from threading import Thread
 from flask_cors import CORS
 
-
 # THIS IS THE USER'S AGENT -- AGENT NUMBER 1 IN THE ARCHITECTURE
 
 # Replace this input with the text you want to summarize
@@ -102,10 +101,19 @@ t5_base_user = Protocol(name="T5BaseModelUser", version="0.0.1")
 async def transcript(ctx: Context):
     global extension_data
     if extension_data is not None:  # Check if there's new extension data
-        if extension_data not in ctx.storage.get("sent_payloads"):
+        # Get the sent payloads from the storage
+        sent_payloads = ctx.storage.get("sent_payloads")
+        # If sent_payloads is None, initialize it to an empty list
+        if sent_payloads is None:
+            sent_payloads = []
+
+        # If the extension data is not in the sent payloads, send a summarization request
+        if extension_data not in sent_payloads:
             INPUT_TEXT = extension_data['content']
             await ctx.send(T5_BASE_AGENT_ADDRESS, SummarizationRequest(text=f"summarize: {INPUT_TEXT}"))
-            ctx.storage.set("sent_payloads", ctx.storage.get("sent_payloads") + [extension_data])  # Remember the sent payload
+            # Add the extension data to the sent payloads and save it in the storage
+            sent_payloads.append(extension_data)
+            ctx.storage.set("sent_payloads", sent_payloads)
 
         SummarizationDone = ctx.storage.get("SummarizationDone")  # Get the "SummarizationDone" flag from the storage
 
@@ -131,11 +139,6 @@ async def transcript(ctx: Context):
 
 @t5_base_user.on_message(model=SummarizationResponse)
 async def handle_data(ctx: Context, sender: str, response: SummarizationResponse):
-    extension_server_url = "http://localhost:3001/extension"
-    payload = {"summarized_text": response.summarized_text}
-    requests.post(extension_server_url, json=payload)  # Send the summarized text back to the Flask server
-    ctx.storage.set("SummarizationDone", False)  # Reset the SummarizationDone flag
-
     ctx.logger.info(f"Summarized text:  {response.summarized_text}")
     ctx.storage.set("SummarizationDone", True)
     ctx.storage.set("SummarizedText", response.summarized_text)
