@@ -46,3 +46,38 @@ Here's how the process works:
 5. The user agent's server receives the POST request and the payload is stored in the agent's shared state.
 
 So, when the extension icon is clicked, the parsed content of the website is sent as a payload to the user agent.
+
+---
+
+Initially, Viceroy summarizes articles, and provides political and philosophical bias detection and reporting. 
+
+Overtime, Viceroy reads and remembers the information it takes in. It evolves the ability to reason on a larger scale with regards to the objective reality, or as objectively as possible with the given inputs.
+
+A map of the sources of news begins to take shape. CNN, Fox, RT, Infowars, SOTT, Reuters, you name it... any and all houses and their subjective bubbles begin to be known.
+
+Reality is double checked back in time, then compared to the snapshot of today, and the events in between.
+
+A model of the world in real-time, with clear, open source algorithms at its heart.
+
+The fetch blockchain, or its network of validators and maintainers, as well as a perhaps yet unseen network of permanent run time and storage will constitute the digital backbone of the brain we hope to achieve.
+
+
+
+Releases:
+
+Egg:
+- Day 1
+    Article summary
+- Day 2
+    Bias detection
+- Day 3
+    Bias report
+
+Caterpillar:
+
+
+
+Chrysalis
+
+
+Butterfly
