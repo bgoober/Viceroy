@@ -34,39 +34,40 @@ fund_agent_if_low(user.wallet.address())
 ################ FLASK SERVER CODE ################
 ###################################################
 
-app = Flask(__name__)
-CORS(app)  # This will enable CORS for all routes
+flask = Flask(__name__)
+CORS(flask)  # This will enable CORS for all routes
 
 # Define a global variable to store the extension data and summarized text
 extension_data = None
 summarized_text = None
-# Your routes go here
 
-# Define function to send a summarization request
-#async def send_summarization_request(ctx, extension_data):
- #   INPUT_TEXT = extension_data['content']
-  #  await ctx.send(T5_BASE_AGENT_ADDRESS, SummarizationRequest(text=f"summarize: {INPUT_TEXT}"))
-   # ctx.storage.set("sent_payloads", ctx.storage.get("sent_payloads") + [extension_data])  # Remember the sent payload
-
+# flasklication routes
 # Modify the Flask route to store the data in the global variable
-@app.route('/extension', methods=['POST'])
+@flask.route('/extension', methods=['POST'])
 def receive_extension_data():
     global extension_data
     payload = request.get_json()  # Get the payload from the request
-    print(f"RECEIVED PAYLOAD FROM EXTENSION: {payload}")  # Print the payload
+    print(f"PAYLOAD FROM EXTENSION: {payload}")  # Print the payload
     extension_data = payload  # Store the payload in the global variable
+
+    # Clean up the content
+    if 'content' in extension_data:
+        content = extension_data['content']
+        clean_content = content.replace('\n', ' ')
+        extension_data['content'] = clean_content
+
     return 'PAYLOAD RECEIVED BY USER AGENT', 200  # Send a response back to the extension
 
 # Define function to run the server
 def run_server():
-    app.run(port=3001)  # Run the Flask server on a different port
+    flask.run(port=3001)  # Run the Flask server on a different port
 
 # Run the server in a separate thread so it doesn't block the main script
 server_thread = Thread(target=run_server)
 server_thread.start()
 
 # Define route to get the summarized text
-@app.route('/get_summary', methods=['GET'])
+@flask.route('/get_summary', methods=['GET'])
 def get_summary():
     global summarized_text
     print(f"Value of summarized_text when /get_summary is hit: {summarized_text}")
@@ -119,7 +120,7 @@ async def transcript(ctx: Context):
             await ctx.send(T5_BASE_AGENT_ADDRESS, SummarizationRequest(text=f"summarize: {INPUT_TEXT}"))
             ctx.logger.info("Sent a summarization request to the base user agent")
             # Add the extension data to the sent payloads and save it in the storage
-            sent_payloads.append(extension_data)
+            sent_payloads.flaskend(extension_data)
             ctx.storage.set("sent_payloads", sent_payloads)
 
         SummarizationDone = ctx.storage.get("SummarizationDone")  # Get the "SummarizationDone" flag from the storage

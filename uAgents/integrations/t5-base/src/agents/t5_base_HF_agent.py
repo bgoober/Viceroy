@@ -79,10 +79,10 @@ t5_base_agent = Protocol(name="T5BaseModelAgent", version="0.0.1")
 @t5_base_agent.on_message(model=TranslationRequest, replies={TranslationResponse, Error})
 async def handle_request(ctx: Context, sender: str, request: TranslationRequest):
     # Log the request details
-    ctx.logger.info(f"Got request from  {sender}")
+    ctx.logger.info(f"RECEIVED TRANSLATION REQUEST FROM:  {sender}")
 
     # Log the request text
-    ctx.logger.info(f"Value of request.text: {request.text}")
+    ctx.logger.info(f"Value of translation request: {request.text}")
 
     # Call the translate_text function
     await translate_text(ctx, sender, request.text)
@@ -91,10 +91,10 @@ async def handle_request(ctx: Context, sender: str, request: TranslationRequest)
 @t5_base_agent.on_message(model=SummarizationRequest, replies={SummarizationResponse, Error})
 async def handle_request(ctx: Context, sender: str, request: SummarizationRequest):
     # Log the request details
-    ctx.logger.info(f"Got request from  {sender}, {request.text}")
+    ctx.logger.info(f"RECEIVED SUMMARIZATION REQUEST FROM:  {sender}")
 
     # Log the request text
-    ctx.logger.info(f"Value of request.text: {request.text}")
+    ctx.logger.info(f"Value of summary request: {request.text}")
 
     # Call the summarize_text function
     await summarize_text(ctx, sender, request.text)
