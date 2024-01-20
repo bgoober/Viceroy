@@ -81,6 +81,10 @@ async def handle_request(ctx: Context, sender: str, request: TranslationRequest)
     # Log the request details
     ctx.logger.info(f"Got request from  {sender}")
 
+    # Log the request text
+    ctx.logger.info(f"Value of request.text: {request.text}")
+
+    # Call the translate_text function
     await translate_text(ctx, sender, request.text)
 
 # handle messages of type SummarizationRequest
@@ -89,8 +93,11 @@ async def handle_request(ctx: Context, sender: str, request: SummarizationReques
     # Log the request details
     ctx.logger.info(f"Got request from  {sender}, {request.text}")
 
-    await summarize_text(ctx, sender, request.text)
+    # Log the request text
+    ctx.logger.info(f"Value of request.text: {request.text}")
 
+    # Call the summarize_text function
+    await summarize_text(ctx, sender, request.text)
 
 # publish_manifest will make the protocol details available on agentverse.
 agent.include(t5_base_agent, publish_manifest=True)

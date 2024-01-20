@@ -18,7 +18,7 @@ function sendPayloadToServer(payload) {
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ content }), // Send only the content as the payload
+    body: JSON.stringify(payload), // Send the payload
   })
     .then((response) => response.json())
     .then((data) => {
@@ -39,7 +39,7 @@ setInterval(function () {
         createButton(); // Create the button
       }
     });
-}, 1000);
+}, 7000);
 
 function createButton() {
   // Create a new button element
@@ -107,7 +107,7 @@ function convertToReaderView(tab) {
           func: function () {
             const documentClone = document.cloneNode(true);
             const article = new Readability(documentClone).parse();
-            return article ? article.content : "";
+            return article ? article.textContent : "";
           },
         },
         ([result]) => {
@@ -156,7 +156,7 @@ function convertToReaderView(tab) {
                     console.log("CSS applied:", styleResults);
 
                     // Send the parsed article content as the payload
-                    sendPayloadToServer(articleContent); // Send only the article content
+                    sendPayloadToServer({ content: articleContent });
                   }
                 );
               }
