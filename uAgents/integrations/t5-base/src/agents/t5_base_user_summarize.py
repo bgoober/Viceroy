@@ -5,6 +5,9 @@ from uagents.setup import fund_agent_if_low
 from flask import Flask, request, jsonify
 from threading import Thread
 from flask_cors import CORS
+import logging
+
+logging.basicConfig(filename="~/Viceroy/uAgents/integrations/t5-base/src/user-agent.log", level=logging.INFO)
 
 # THIS IS THE USER'S AGENT -- AGENT NUMBER 1 IN THE ARCHITECTURE
 
@@ -47,16 +50,25 @@ summarized_text = None
 def receive_extension_data():
     global extension_data
     payload = request.get_json()  # Get the payload from the request
-    print(f"PAYLOAD FROM EXTENSION: {payload}")  # Print the payload
-    extension_data = payload  # Store the payload in the global variable
 
     # Clean up the content
-    if 'content' in extension_data:
-        content = extension_data['content']
-        clean_content = content.replace('\n', ' ')
-        extension_data['content'] = clean_content
+    content = payload['content']
+    clean_content = content.replace('\n', ' ')
+    payload['content'] = clean_content
+
+    print(f"PAYLOAD FROM EXTENSION: {payload}")  # Print the cleaned payload
+    extension_data = payload  # Store the cleaned payload in the global variable
 
     return 'PAYLOAD RECEIVED BY USER AGENT', 200  # Send a response back to the extension
+
+
+# Flask server code
+@flask.route('/summarized_text', methods=['POST'])
+def receive_summarized_text():
+    global summarized_text
+    payload = request.get_json()  # Get the payload from the request
+    summarized_text = payload['summarized_text']  # Store the summarized text in the global variable
+    return 'Summarized text received by user agent', 200  # Send a response back to the extension
 
 # Define function to run the server
 def run_server():
@@ -66,24 +78,10 @@ def run_server():
 server_thread = Thread(target=run_server)
 server_thread.start()
 
-# Define route to get the summarized text
-@flask.route('/get_summary', methods=['GET'])
-def get_summary():
-    global summarized_text
-    print(f"Value of summarized_text when /get_summary is hit: {summarized_text}")
-    if summarized_text is not None:
-        # If the summarized text exists, send it as a response
-        return jsonify({'summary': summarized_text})
-    else:
-        # If the summarized text does not exist, send a 404 response
-        return jsonify({'error': 'No summarized text available'}), 404
-    
 ##########################################################
 ################ END OF FLASK SERVER CODE ################
 ##########################################################
     
-
-
 ##########################################################
 ################ USER AGENT CODE #########################
 ##########################################################
@@ -120,7 +118,7 @@ async def transcript(ctx: Context):
             await ctx.send(T5_BASE_AGENT_ADDRESS, SummarizationRequest(text=f"summarize: {INPUT_TEXT}"))
             ctx.logger.info("Sent a summarization request to the base user agent")
             # Add the extension data to the sent payloads and save it in the storage
-            sent_payloads.flaskend(extension_data)
+            sent_payloads.append(extension_data)
             ctx.storage.set("sent_payloads", sent_payloads)
 
         SummarizationDone = ctx.storage.get("SummarizationDone")  # Get the "SummarizationDone" flag from the storage
@@ -133,27 +131,26 @@ async def transcript(ctx: Context):
             await ctx.send(T5_BASE_AGENT_ADDRESS, SummarizationRequest(text=f"summarize: {INPUT_TEXT}"))
             ctx.logger.info("Sent a summarization request to the base user agent")  # Log the sent request
 
-# This function is called when a SummarizationResponse message is received
+# handle_data function
 @t5_base_user.on_message(model=SummarizationResponse)
-async def handle_data(ctx: Context, sender: str, response: SummarizationResponse):
+async def handle_data(ctx: Context, sender: str, summarization_response: SummarizationResponse):
     global summarized_text
     # Log the summarized text
-    ctx.logger.info(f"handle_data function called. Summarized text: {response.summarized_text}")
-    ctx.logger.info(f"Summarized text:  {response.summarized_text}")
+    ctx.logger.info(f"handle_data function called. Summarized text: {summarization_response.summarized_text}")
+    ctx.logger.info(f"Summarized text:  {summarization_response.summarized_text}")
     
     # Store the summarized text in the global variable
-    summarized_text = response.summarized_text
+    summarized_text = summarization_response.summarized_text
 
     # Send the summarized text back to the extension
-    extension_server_url = "http://localhost:3001"  # Replace with the URL of your extension's server
-    payload = {"summarized_text": response.summarized_text}
-    response = requests.post(extension_server_url, json=payload)
+    extension_server_url = "http://localhost:3001/summarized_text"  # Replace with the URL of your extension's server
+    payload = {"summarized_text": summarization_response.summarized_text}
+    post_response = requests.post(extension_server_url, json=payload)
 
-    if response.status_code == 200:
+    if post_response.status_code == 200:
         ctx.logger.info("Successfully sent summarized text to the extension.")
     else:
-        ctx.logger.error(f"Failed to send summarized text to the extension. Status code: {response.status_code}")
-
+        ctx.logger.error(f"Failed to send summarized text to the extension. Status code: {post_response.status_code}")
 # Define message event to handle errors
 @t5_base_user.on_message(model=Error)
 async def handle_error(ctx: Context, sender: str, error: Error):
