@@ -100,94 +100,72 @@ function convertToReaderView(tab) {
     {
       target: { tabId: tab.id },
       files: ["libs/readability.js"],
-    },
-    (injectionResults) => {
-      if (chrome.runtime.lastError) {
-        console.error("Error injecting Readability:", chrome.runtime.lastError);
-        return;
+    }
+  )
+  .then((injectionResults) => {
+    console.log("Readability library injected:", injectionResults);
+
+    // Step 2: Parse the page content
+    return chrome.scripting.executeScript(
+      {
+        target: { tabId: tab.id },
+        func: function () {
+          const documentClone = document.cloneNode(true);
+          const article = new Readability(documentClone).parse();
+          return article ? article.textContent : "";
+        },
       }
+    );
+  })
+  .then((parsingResults) => {
+    console.log("Content parsed:", parsingResults);
 
-      console.log("Readability library injected:", injectionResults);
+    let articleContent = parsingResults[0].result;
 
-      // Step 2: Parse the page content
-      chrome.scripting.executeScript(
+    if (articleContent) {
+      // Step 3: Replace the current page content with parsed content
+      return chrome.scripting.executeScript(
         {
           target: { tabId: tab.id },
-          func: function () {
-            const documentClone = document.cloneNode(true);
-            const article = new Readability(documentClone).parse();
-            return article ? article.textContent : "";
+          func: function (content) {
+            // Replace the current page content with the parsed content
+            document.open();
+            document.write(`
+              <div id="container" style="display: block;">
+                  <div id="parsedContent">${content}</div>
+                  <div id="summarizedTextContainer"></div>
+              </div>
+            `);
+            document.close();
           },
-        },
-        (parsingResults) => {
-          if (chrome.runtime.lastError) {
-            console.error("Error parsing content:", chrome.runtime.lastError);
-            return;
-          }
-
-          console.log("Content parsed:", parsingResults);
-
-          let articleContent = parsingResults[0].result;
-
-          if (articleContent) {
-            // Step 3: Replace the current page content with parsed content
-            chrome.scripting.executeScript(
-              {
-                target: { tabId: tab.id },
-                func: function (content) {
-                  // Replace the current page content with the parsed content
-                  document.open();
-                  document.write(`
-                    <div id="container" style="display: block;">
-                        <div id="parsedContent">${content}</div>
-                        <div id="summarizedTextContainer"></div>
-                    </div>
-                  `);
-                  document.close();
-                },
-                args: [articleContent],
-              },
-              (insertionResults) => {
-                if (chrome.runtime.lastError) {
-                  console.error(
-                    "Error replacing content:",
-                    chrome.runtime.lastError
-                  );
-                  return;
-                }
-
-                // Mark tab as being in reader view
-                readerTabs[tab.id] = true;
-
-                // Step 4: Apply the reader.css styling
-                chrome.scripting.insertCSS(
-                  {
-                    target: { tabId: tab.id },
-                    files: ["reader.css"],
-                  },
-                  (styleResults) => {
-                    if (chrome.runtime.lastError) {
-                      console.error(
-                        "Error applying CSS:",
-                        chrome.runtime.lastError
-                      );
-                    }
-
-                    console.log("CSS applied:", styleResults);
-
-                    // Send the parsed article content as the payload
-                    sendPayloadToServer({ content: articleContent });
-                  }
-                );
-              }
-            );
-          } else {
-            console.warn("No parsed content received.");
-          }
+          args: [articleContent],
         }
-      );
+      )
+      .then((insertionResults) => {
+        // Mark tab as being in reader view
+        readerTabs[tab.id] = true;
+
+        // Step 4: Apply the reader.css styling
+        return chrome.scripting.insertCSS(
+          {
+            target: { tabId: tab.id },
+            files: ["reader.css"],
+          }
+        );
+      })
+      .then((styleResults) => {
+        console.log("CSS applied:", styleResults);
+
+        // Send the parsed article content as the payload
+        sendPayloadToServer({ content: articleContent });
+      });
+    } else {
+      console.warn("No parsed content received.");
     }
-  );
+  })
+  .catch((error) => {
+    console.error("Error:", error);
+  });
 }
 
 // let readerTabs = {};

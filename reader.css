@@ -1,11 +1,14 @@
 #container {
     display: block;
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
+    width: 100%; /* Ensure these elements do not exceed the width of the viewport */
+    word-wrap: break-word; /* Break the word at the end of the line */
 }
 
 body {
     font-family: Arial, sans-serif;
     line-height: 1.6;
-    padding: 20px;
+    padding: 10px;
     color: #000000;
     background-color: #FAFAFA;
     border: 1px solid #d0d0d0; /* A subtle border */
@@ -13,6 +16,8 @@ body {
     margin: 4px; /* Space around the body to show off the shadow */
     width: 100%; /* Adjust the body's width to occupy the full width of the viewport */
     overflow: auto; /* Enable scrolling if the content exceeds the height of the viewport */
+    word-wrap: break-word; /* Break the word at the end of the line */
+    box-sizing: border-box; /* Include padding and border in the element's total width and height */
 }
 
 #summarizedTextContainer {
@@ -22,6 +27,7 @@ body {
     overflow: auto; /* Enable scrolling if the content exceeds the height of the viewport */
     padding: 10px; /* Add some padding around the summarized text */
     box-sizing: border-box; /* Include the padding in the element's total width and height */
+    word-wrap: break-word; /* Break the word at the end of the line */
 }
 
 #logo {
@@ -32,4 +38,8 @@ body {
     width: 50px;   /* Adjust to the desired size */
     height: auto;  /* This maintains the logo's aspect ratio */
     z-index: 1;    /* Ensure the logo sits above other content */
+}
+
+img {
+    max-width: 100%; /* Ensure images are not larger than their container */
 }

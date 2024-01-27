@@ -51,15 +51,19 @@ def receive_extension_data():
     global extension_data
     payload = request.get_json()  # Get the payload from the request
 
-    # Clean up the content
-    content = payload['content']
-    clean_content = content.replace('\n', ' ')
-    payload['content'] = clean_content
+    # Check if 'content' key is in the payload
+    if 'content' in payload:
+        # Clean up the content
+        content = payload['content']
+        clean_content = ' '.join(content.split())
+        payload['content'] = clean_content
 
-    print(f"PAYLOAD FROM EXTENSION: {payload}")  # Print the cleaned payload
-    extension_data = payload  # Store the cleaned payload in the global variable
+        print(f"PAYLOAD FROM EXTENSION: {payload}")  # Print the cleaned payload
+        extension_data = payload  # Store the cleaned payload in the global variable
 
-    return 'PAYLOAD RECEIVED BY USER AGENT', 200  # Send a response back to the extension
+        return 'PAYLOAD RECEIVED BY USER AGENT', 200  # Send a response back to the extension
+    else:
+        return 'No content in payload', 400  # Send an error response back to the extension
 
 # Flask summarized text route
 @flask.route('/summarized_text', methods=['POST', 'GET'])
