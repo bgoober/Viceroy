@@ -61,14 +61,16 @@ def receive_extension_data():
 
     return 'PAYLOAD RECEIVED BY USER AGENT', 200  # Send a response back to the extension
 
-
-# Flask server code
-@flask.route('/summarized_text', methods=['POST'])
+# Flask summarized text route
+@flask.route('/summarized_text', methods=['POST', 'GET'])
 def receive_summarized_text():
     global summarized_text
-    payload = request.get_json()  # Get the payload from the request
-    summarized_text = payload['summarized_text']  # Store the summarized text in the global variable
-    return 'Summarized text received by user agent', 200  # Send a response back to the extension
+    if request.method == 'POST':
+        payload = request.get_json()  # Get the payload from the request
+        summarized_text = payload['summarized_text']  # Store the summarized text in the global variable
+        return 'SUMMARIZED TEXT POSTED TO SERVER BY AGENT', 200  # Send a response back to the extension
+    elif request.method == 'GET':
+        return jsonify(summarized_text=summarized_text), 200
 
 # Define function to run the server
 def run_server():
@@ -102,7 +104,7 @@ async def transcript(ctx: Context):
     # Get the extension data from the global variable
     global extension_data
     # Log the extension data
-    ctx.logger.info(f"Value of extension_data: {extension_data}")
+    ctx.logger.info(f"VALUE OF EXTENSION DATA: {extension_data}")
     # Check if the extension data exists
     if extension_data is not None:  # Check if there's new extension data
         # Get the sent payloads from the storage
@@ -110,26 +112,31 @@ async def transcript(ctx: Context):
         # If sent_payloads is None, initialize it to an empty list
         if sent_payloads is None:
             sent_payloads = []
-        ctx.logger.info(f"Value of sent_payloads: {sent_payloads}")
+        ctx.logger.info(f"VALUE OF SENT PAYLOADS: {sent_payloads}")
         # If the extension data is not in the sent payloads, send a summarization request
         if extension_data not in sent_payloads:
             INPUT_TEXT = extension_data['content']
             ctx.logger.info(f"Value of INPUT_TEXT: {INPUT_TEXT}")
             await ctx.send(T5_BASE_AGENT_ADDRESS, SummarizationRequest(text=f"summarize: {INPUT_TEXT}"))
-            ctx.logger.info("Sent a summarization request to the base user agent")
+            ctx.logger.info("AGENT SENDS SUMMARIZATION REQUEST TO BASE AGENT")
             # Add the extension data to the sent payloads and save it in the storage
             sent_payloads.append(extension_data)
             ctx.storage.set("sent_payloads", sent_payloads)
 
         SummarizationDone = ctx.storage.get("SummarizationDone")  # Get the "SummarizationDone" flag from the storage
-        ctx.logger.info(f"Value of SummarizationDone: {SummarizationDone}")
+        ctx.logger.info(f"VALUE OF SummarizationDone: {SummarizationDone}")
         # If the extension data exists and the summarization has not been done yet, send a summarization request
         if not SummarizationDone:
             INPUT_TEXT = extension_data['content']
             ctx.logger.info(f"Updated INPUT_TEXT: {INPUT_TEXT}")  # Log the updated INPUT_TEXT
 
             await ctx.send(T5_BASE_AGENT_ADDRESS, SummarizationRequest(text=f"summarize: {INPUT_TEXT}"))
-            ctx.logger.info("Sent a summarization request to the base user agent")  # Log the sent request
+            ctx.logger.info("SENT A SUMMARIZATION REQUEST TO BASE AGENT")  # Log the sent request
+
+            # else, reset extension_data to None
+        else:
+            extension_data = None
+            ctx.logger.info("Reset extension_data to None")
 
 # handle_data function
 @t5_base_user.on_message(model=SummarizationResponse)
@@ -148,9 +155,10 @@ async def handle_data(ctx: Context, sender: str, summarization_response: Summari
     post_response = requests.post(extension_server_url, json=payload)
 
     if post_response.status_code == 200:
-        ctx.logger.info("Successfully sent summarized text to the extension.")
+        ctx.logger.info(f"Successfully sent summarized text to the extension. {post_response.text}")
     else:
         ctx.logger.error(f"Failed to send summarized text to the extension. Status code: {post_response.status_code}")
+
 # Define message event to handle errors
 @t5_base_user.on_message(model=Error)
 async def handle_error(ctx: Context, sender: str, error: Error):

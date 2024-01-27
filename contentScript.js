@@ -1,5 +1,6 @@
 chrome.runtime.onMessage.addListener(function (request) {
     if (request.message === 'showSummarizedText') {
+      console.log('showSummarizedText message received');
       // Check if the summarizedTextContainer element already exists
       let summarizedTextContainer = document.getElementById('summarizedTextContainer');
       if (!summarizedTextContainer) {

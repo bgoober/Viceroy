@@ -33,17 +33,19 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   }
 });
 
-// ... existing code ...
-
-// Fetch the summarized text from the server every 5 seconds
-setInterval(fetchSummarizedTextFromAgent, 10000);
-
 function fetchSummarizedTextFromAgent() {
   console.log('fetchSummarizedTextFromAgent called');
   fetch('http://localhost:3001/summarized_text')
-    .then(response => response.json())
+    .then(response => {
+      console.log('Response from server:', response);
+      if (response.status === 200) {
+        return response.json();
+      } else {
+        throw new Error('Server response was not ok.');
+      }
+    })
     .then(data => {
-      console.log('Received summarized text from server:', data.summarized_text); // Log the summarized text
+      console.log('Received summarized text from server:', data); // Log the entire data object
 
       if (data.summarized_text) {
         chrome.tabs.query(
@@ -56,16 +58,20 @@ function fetchSummarizedTextFromAgent() {
           }
         );
       }
+    })
+    .catch(error => {
+      console.log('There was a problem with the fetch operation: ', error.message);
     });
 }
 
-// ... existing code ...
+// Fetch the summarized text from the server every 5 seconds
+setInterval(fetchSummarizedTextFromAgent, 2000);
 
-chrome.runtime.onMessage.addListener(function (request) {
-  if (request.message === "fetchSummary") {
-    fetchSummarizedTextFromAgent();
-  }
-});
+// chrome.runtime.onMessage.addListener(function (request) {
+//   if (request.message === "fetchSummary") {
+//     fetchSummarizedTextFromAgent();
+//   }
+// });
 
 /// READER VIEW FUNCTIONS ///
 
