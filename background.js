@@ -14,24 +14,43 @@ function sendPayloadToServer(payload) {
     },
     body: JSON.stringify(payload),
   })
-    .then((response) => response.json())
+    .then((response) => {
+      // Log the entire response object
+      console.log("Response:", response);
+
+      // Check if the response is JSON
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        return response.json();
+      } else {
+        throw new TypeError("Oops, we haven't got JSON!");
+      }
+    })
     .then((data) => {
+      summarizedText = data.summarizedText;
       chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
-          chrome.tabs.sendMessage(tabs[0].id, {
-              message: "showSummarizedText",
-              summarizedText: data.summarizedText,
-          });
-          chrome.scripting.executeScript(
-              {
-                  target: { tabId: tabs[0].id },
-                  func: function (summarizedText) {
-                      document.getElementById('summarizedTextContainer').innerHTML = summarizedText;
-                  },
-                  args: [data.summarizedText],
+        chrome.tabs.sendMessage(tabs[0].id, {
+          message: "showSummarizedText",
+          summarizedText: summarizedText,
+        });
+        chrome.scripting.executeScript({
+          target: { tabId: tabs[0].id },
+          func: ((summarizedText) => {
+            return function () {
+              const summarizedTextContainer = document.getElementById(
+                "summarizedTextContainer"
+              );
+              if (summarizedTextContainer) {
+                summarizedTextContainer.innerHTML = summarizedText;
               }
-          );
+            };
+          })(summarizedText),
+        });
       });
-  });
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+    });
 }
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
@@ -42,18 +61,18 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 });
 
 function fetchSummarizedTextFromAgent() {
-  console.log('fetchSummarizedTextFromAgent called');
-  fetch('http://localhost:3001/summarized_text')
-    .then(response => {
-      console.log('Response from server:', response);
+  console.log("fetchSummarizedTextFromAgent called");
+  fetch("http://localhost:3001/summarized_text")
+    .then((response) => {
+      console.log("Response from server:", response);
       if (response.status === 200) {
         return response.json();
       } else {
-        throw new Error('Server response was not ok.');
+        throw new Error("Server response was not ok.");
       }
     })
-    .then(data => {
-      console.log('Received summarized text from server:', data); // Log the entire data object
+    .then((data) => {
+      console.log("Received summarized text from server:", data); // Log the entire data object
 
       if (data.summarized_text) {
         chrome.tabs.query(
@@ -67,8 +86,11 @@ function fetchSummarizedTextFromAgent() {
         );
       }
     })
-    .catch(error => {
-      console.log('There was a problem with the fetch operation: ', error.message);
+    .catch((error) => {
+      console.log(
+        "There was a problem with the fetch operation: ",
+        error.message
+      );
     });
 }
 
@@ -96,76 +118,87 @@ function toggleReaderView(tab) {
 
 function convertToReaderView(tab) {
   // Step 1: Inject Readability library
-  chrome.scripting.executeScript(
-    {
+  chrome.scripting
+    .executeScript({
       target: { tabId: tab.id },
       files: ["libs/readability.js"],
-    }
-  )
-  .then((injectionResults) => {
-    console.log("Readability library injected:", injectionResults);
+    })
+    .then((injectionResults) => {
+      console.log("Readability library injected:", injectionResults);
 
-    // Step 2: Parse the page content
-    return chrome.scripting.executeScript(
-      {
+      // Step 2: Parse the page content
+      return chrome.scripting.executeScript({
         target: { tabId: tab.id },
         func: function () {
           const documentClone = document.cloneNode(true);
           const article = new Readability(documentClone).parse();
           return article ? article.textContent : "";
         },
-      }
-    );
-  })
-  .then((parsingResults) => {
-    console.log("Content parsed:", parsingResults);
+      });
+    })
+    .then((parsingResults) => {
+      console.log("Content parsed:", parsingResults);
 
-    let articleContent = parsingResults[0].result;
+      let articleContent = parsingResults[0].result;
 
-    if (articleContent) {
-      // Step 3: Replace the current page content with parsed content
-      return chrome.scripting.executeScript(
-        {
-          target: { tabId: tab.id },
-          func: function (content) {
-            // Replace the current page content with the parsed content
-            document.open();
-            document.write(`
+      if (articleContent) {
+        // Step 3: Replace the current page content with parsed content
+        return chrome.scripting
+          .executeScript({
+            target: { tabId: tab.id },
+            func: function (content) {
+              // Replace the current page content with the parsed content
+              document.open();
+              document.write(`
               <div id="container" style="display: block;">
                   <div id="parsedContent">${content}</div>
                   <div id="summarizedTextContainer"></div>
               </div>
             `);
-            document.close();
-          },
-          args: [articleContent],
-        }
-      )
-      .then((insertionResults) => {
-        // Mark tab as being in reader view
-        readerTabs[tab.id] = true;
+              document.close();
+            },
+            args: [articleContent],
+          })
+          .then((insertionResults) => {
+            // Mark tab as being in reader view
+            readerTabs[tab.id] = true;
 
-        // Step 4: Apply the reader.css styling
-        return chrome.scripting.insertCSS(
-          {
-            target: { tabId: tab.id },
-            files: ["reader.css"],
-          }
-        );
-      })
-      .then((styleResults) => {
-        console.log("CSS applied:", styleResults);
+            // Set the innerHTML of the summarizedTextContainer to the stored summarized text
+            if (summarizedText) {
+              chrome.scripting.executeScript({
+                target: { tabId: tab.id },
+                func: ((summarizedText) => {
+                  return function () {
+                    const summarizedTextContainer = document.getElementById(
+                      "summarizedTextContainer"
+                    );
+                    if (summarizedTextContainer) {
+                      summarizedTextContainer.innerHTML = summarizedText;
+                    }
+                  };
+                })(summarizedText),
+              });
+            }
 
-        // Send the parsed article content as the payload
-        sendPayloadToServer({ content: articleContent });
-      });
-    } else {
-      console.warn("No parsed content received.");
-    }
-  })
-  .catch((error) => {
-    console.error("Error:", error);
-  });
+            // Step 4: Apply the reader.css styling
+            return chrome.scripting.insertCSS({
+              target: { tabId: tab.id },
+              files: ["reader.css"],
+            });
+          })
+          .then((styleResults) => {
+            console.log("CSS applied:", styleResults);
+
+            // Send the parsed article content as the payload
+            sendPayloadToServer({ content: articleContent });
+          });
+      } else {
+        console.warn("No parsed content received.");
+      }
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+    });
 }
 
 // let readerTabs = {};

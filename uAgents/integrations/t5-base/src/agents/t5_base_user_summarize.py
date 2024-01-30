@@ -1,18 +1,11 @@
-import os, requests, asyncio
+import os, requests, logging, time
 from uagents import Agent, Context, Protocol
 from messages.t5_base import SummarizationRequest, SummarizationResponse, Error
 from uagents.setup import fund_agent_if_low
-from flask import Flask, request, jsonify
-from threading import Thread
-from flask_cors import CORS
-import logging
 
 logging.basicConfig(filename="~/Viceroy/uAgents/integrations/t5-base/src/user-agent.log", level=logging.INFO)
 
 # THIS IS THE USER'S AGENT -- AGENT NUMBER 1 IN THE ARCHITECTURE
-
-# Replace this input with the text you want to summarize
-# INPUT_TEXT = ""
 
 # Get the T5_BASE_AGENT_ADDRESS from the environment variables
 T5_BASE_AGENT_ADDRESS = os.getenv(
@@ -33,61 +26,6 @@ user = Agent(
 # Check and top up the agent's fund if low
 fund_agent_if_low(user.wallet.address())
 
-###################################################
-################ FLASK SERVER CODE ################
-###################################################
-
-flask = Flask(__name__)
-CORS(flask)  # This will enable CORS for all routes
-
-# Define a global variable to store the extension data and summarized text
-extension_data = None
-summarized_text = None
-
-# flasklication routes
-# Modify the Flask route to store the data in the global variable
-@flask.route('/extension', methods=['POST'])
-def receive_extension_data():
-    global extension_data
-    payload = request.get_json()  # Get the payload from the request
-
-    # Check if 'content' key is in the payload
-    if 'content' in payload:
-        # Clean up the content
-        content = payload['content']
-        clean_content = ' '.join(content.split())
-        payload['content'] = clean_content
-
-        print(f"PAYLOAD FROM EXTENSION: {payload}")  # Print the cleaned payload
-        extension_data = payload  # Store the cleaned payload in the global variable
-
-        return 'PAYLOAD RECEIVED BY USER AGENT', 200  # Send a response back to the extension
-    else:
-        return 'No content in payload', 400  # Send an error response back to the extension
-
-# Flask summarized text route
-@flask.route('/summarized_text', methods=['POST', 'GET'])
-def receive_summarized_text():
-    global summarized_text
-    if request.method == 'POST':
-        payload = request.get_json()  # Get the payload from the request
-        summarized_text = payload['summarized_text']  # Store the summarized text in the global variable
-        return 'SUMMARIZED TEXT POSTED TO SERVER BY AGENT', 200  # Send a response back to the extension
-    elif request.method == 'GET':
-        return jsonify(summarized_text=summarized_text), 200
-
-# Define function to run the server
-def run_server():
-    flask.run(port=3001)  # Run the Flask server on a different port
-
-# Run the server in a separate thread so it doesn't block the main script
-server_thread = Thread(target=run_server)
-server_thread.start()
-
-##########################################################
-################ END OF FLASK SERVER CODE ################
-##########################################################
-    
 ##########################################################
 ################ USER AGENT CODE #########################
 ##########################################################
@@ -96,21 +34,40 @@ server_thread.start()
 @user.on_event("startup")
 async def initialize_storage(ctx: Context):
     ctx.storage.set("SummarizationDone", False)  # Set the "SummarizationDone" flag to False
-
+    ctx.storage.set("sent_payloads", [])  # Clear the "sent_payloads" storage object
+    
 # Create an instance of Protocol with a label "T5BaseModelUser"
 t5_base_user = Protocol(name="T5BaseModelUser", version="0.0.1")
+
+def get_extension_data():
+    while True:
+        response = requests.get('http://localhost:3001/extension')
+        print(f"Response status code: {response.status_code}")
+        print(f"Response data: {response.text}")
+        if response.status_code == 200:
+            extension_data = response.json()
+            print(f"Extension data: {extension_data}")
+            if extension_data is not None:
+                return extension_data
+        else:
+            print(f"Error: {response.status_code}")
+        time.sleep(5)  # Wait for 5 seconds before making the next request
 
 # Define interval event to send a summarization request every 30 seconds
 @t5_base_user.on_interval(period=30, messages=SummarizationRequest) 
 async def transcript(ctx: Context):
     # Log the function call
     ctx.logger.info("TRANSCRIPT FUNCTION CALLED")
-    # Get the extension data from the global variable
+    # Get the extension data from the get_extension_data function
     global extension_data
+    extension_data = get_extension_data()
     # Log the extension data
     ctx.logger.info(f"VALUE OF EXTENSION DATA: {extension_data}")
     # Check if the extension data exists
     if extension_data is not None:  # Check if there's new extension data
+        # Extract the content from the extension data and assign it to INPUT_TEXT
+        INPUT_TEXT = extension_data['content']
+        ctx.logger.info(f"Value of INPUT_TEXT: {INPUT_TEXT}")
         # Get the sent payloads from the storage
         sent_payloads = ctx.storage.get("sent_payloads")
         # If sent_payloads is None, initialize it to an empty list
@@ -119,28 +76,20 @@ async def transcript(ctx: Context):
         ctx.logger.info(f"VALUE OF SENT PAYLOADS: {sent_payloads}")
         # If the extension data is not in the sent payloads, send a summarization request
         if extension_data not in sent_payloads:
-            INPUT_TEXT = extension_data['content']
-            ctx.logger.info(f"Value of INPUT_TEXT: {INPUT_TEXT}")
             await ctx.send(T5_BASE_AGENT_ADDRESS, SummarizationRequest(text=f"summarize: {INPUT_TEXT}"))
             ctx.logger.info("AGENT SENDS SUMMARIZATION REQUEST TO BASE AGENT")
-            # Add the extension data to the sent payloads and save it in the storage
             sent_payloads.append(extension_data)
             ctx.storage.set("sent_payloads", sent_payloads)
-
-        SummarizationDone = ctx.storage.get("SummarizationDone")  # Get the "SummarizationDone" flag from the storage
-        ctx.logger.info(f"VALUE OF SummarizationDone: {SummarizationDone}")
-        # If the extension data exists and the summarization has not been done yet, send a summarization request
-        if not SummarizationDone:
-            INPUT_TEXT = extension_data['content']
-            ctx.logger.info(f"Updated INPUT_TEXT: {INPUT_TEXT}")  # Log the updated INPUT_TEXT
-
-            await ctx.send(T5_BASE_AGENT_ADDRESS, SummarizationRequest(text=f"summarize: {INPUT_TEXT}"))
-            ctx.logger.info("SENT A SUMMARIZATION REQUEST TO BASE AGENT")  # Log the sent request
-
-            # else, reset extension_data to None
         else:
-            extension_data = None
-            ctx.logger.info("Reset extension_data to None")
+            ctx.logger.info("Extension data already in sent payloads. Not sending summarization request.")
+
+        # Clear old entries from the sent_payloads list if it's too long
+        if len(sent_payloads) > 1:  # Adjust this value as needed
+            sent_payloads = sent_payloads[-100:]  # Keep only the last 100 entries
+            ctx.storage.set("sent_payloads", sent_payloads)
+        # Reset extension_data to None after it's processed
+        extension_data = None
+        ctx.logger.info("Reset extension_data to None")
 
 # handle_data function
 @t5_base_user.on_message(model=SummarizationResponse)
