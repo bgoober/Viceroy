@@ -1,6 +1,6 @@
 # Viceroy
 
-An artificially intelligent reader view for detecting and categorizing bias in an article or web page (future development).
+An artificially intelligent reader view for detecting and categorizing bias in an article or web page (future development). Development is currently paused.
 
 AI Agents are from Fetch.ai's uAgents repository -- https://github.com/fetchai/uAgents
 
