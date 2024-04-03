@@ -8,4 +8,4 @@ authors = ["Prajna"]
 python = ">=3.10,<3.12"
 uagents = "*"
 requests = "^2.31.0"
-pillow = "^10.0.0"
+pillow = "^10.3.0"
